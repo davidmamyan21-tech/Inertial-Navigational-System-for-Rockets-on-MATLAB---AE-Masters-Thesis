@@ -825,7 +825,7 @@ methods (Access = private)
         N=length(t);
         posCF=zeros(N,3); velCF=zeros(N,3);
         posCF(1,:)=[px(1),py(1),pz(1)]; velCF(1,:)=[vx(1),vy(1),vz(1)];
-        qCF=q0; kp=0.6; gPtr=1;  % kv removed — CF velocity comes purely from IMU
+        qCF=q0; kp=0.3; gPtr=1;  % kv removed — CF velocity comes purely from IMU
         for k=1:N-1
             qCF=q_true(k,:)';   % anchor attitude to truth
             Rib=rocket_ins_simulation.q2Rot(qCF);
