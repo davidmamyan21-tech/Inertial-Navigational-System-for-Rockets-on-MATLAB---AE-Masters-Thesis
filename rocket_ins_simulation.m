@@ -467,7 +467,7 @@ methods (Access = private)
             [posEK,velEK]=app.runEKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
                 tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
             posEK = rocket_ins_simulation.lpSmooth(posEK, fs, 0.3);
-            velEK = rocket_ins_simulation.lpSmooth(velEK, fs, 0.5);
+            velEK = rocket_ins_simulation.lpSmooth(velEK, fs, 0.3);
         end
 
         % ── UKF ──────────────────────────────────────────────────────
@@ -477,7 +477,7 @@ methods (Access = private)
             [posUK,velUK]=app.runUKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
                 tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
             posUK = rocket_ins_simulation.lpSmooth(posUK, fs, 0.3);
-            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, 0.35);
+            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, 0.3);
         end
 
         % ── CF ───────────────────────────────────────────────────────
@@ -702,15 +702,15 @@ methods (Access = private)
         posEK=zeros(N,3); velEK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,2.0);
+        GPS_V_filt=max(GPS_V,3.0);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
         H=[eye(6),zeros(6,9)];
-        % Pcov minimum floor — prevents covariance collapsing to 0
-        % which would make K→0 and stop all GPS corrections
-        Pmin=diag([0.5^2*ones(1,3), 0.5^2*ones(1,3), (0.1*pi/180)^2*ones(1,3),...
-                   1e-5*ones(1,3), 1e-7*ones(1,3)]);
+        % Pmin: tiny position floor only — velocity states must be free to converge
+        % to avoid GPS velocity correction oscillations
+        Pmin=diag([0.1^2*ones(1,3), 1e-6*ones(1,3), 1e-8*ones(1,3),...
+                   1e-7*ones(1,3), 1e-9*ones(1,3)]);
         gPtr=1;
         posEK(1,:)=pN'; velEK(1,:)=vN';
         for k=1:N-1
@@ -767,8 +767,8 @@ methods (Access = private)
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
         H=[eye(6),zeros(6,9)];
-        Pmin=diag([0.5^2*ones(1,3), 0.5^2*ones(1,3), (0.1*pi/180)^2*ones(1,3),...
-                   1e-5*ones(1,3), 1e-7*ones(1,3)]);
+        Pmin=diag([0.1^2*ones(1,3), 1e-6*ones(1,3), 1e-8*ones(1,3),...
+                   1e-7*ones(1,3), 1e-9*ones(1,3)]);
         gPtr=1;
         posUK(1,:)=pN'; velUK(1,:)=vN';
         alpha=1e-3; kappa=0; beta=2;
