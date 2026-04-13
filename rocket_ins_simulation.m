@@ -466,8 +466,6 @@ methods (Access = private)
             app.setStatus('⏳  EKF running...',[1 0.8 0.2]);
             [posEK,velEK]=app.runEKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
                 tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
-            posEK = rocket_ins_simulation.lpSmooth(posEK, fs, 0.3);
-            velEK = rocket_ins_simulation.lpSmooth(velEK, fs, 0.3);
         end
 
         % ── UKF ──────────────────────────────────────────────────────
@@ -476,8 +474,6 @@ methods (Access = private)
             app.setStatus('⏳  UKF running...',[1 0.8 0.2]);
             [posUK,velUK]=app.runUKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
                 tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
-            posUK = rocket_ins_simulation.lpSmooth(posUK, fs, 0.3);
-            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, 0.3);
         end
 
         % ── CF ───────────────────────────────────────────────────────
@@ -702,7 +698,7 @@ methods (Access = private)
         posEK=zeros(N,3); velEK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,3.0);
+        GPS_V_filt=max(GPS_V,5.0);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
@@ -762,7 +758,7 @@ methods (Access = private)
         posUK=zeros(N,3); velUK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,6.0);
+        GPS_V_filt=max(GPS_V,8.0);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
