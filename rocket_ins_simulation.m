@@ -67,7 +67,8 @@ properties (Access = private)
     PosAxes   % {1x6}
     VelAxes   % {1x6}
     ErrAxes   % {1x2}
-    BarAx
+    BarAxP    % position RMS bar
+    BarAxV    % velocity RMS bar
 
     PresetDB
 end
@@ -279,8 +280,11 @@ methods (Access = private)
         rocket_ins_simulation.styleAx(ax1,AB,AF,AG); app.ErrAxes{1}=ax1;
         ax2=uiaxes(gE); ax2.Layout.Row=1; ax2.Layout.Column=2;
         rocket_ins_simulation.styleAx(ax2,AB,AF,AG); app.ErrAxes{2}=ax2;
-        axB=uiaxes(gE); axB.Layout.Row=2; axB.Layout.Column=[1 2];
-        rocket_ins_simulation.styleAx(axB,AB,AF,AG); app.BarAx=axB;
+        % Two separate bar axes — independent scales for pos and vel
+        axBP=uiaxes(gE); axBP.Layout.Row=2; axBP.Layout.Column=1;
+        rocket_ins_simulation.styleAx(axBP,AB,AF,AG); app.BarAxP=axBP;
+        axBV=uiaxes(gE); axBV.Layout.Row=2; axBV.Layout.Column=2;
+        rocket_ins_simulation.styleAx(axBV,AB,AF,AG); app.BarAxV=axBV;
     end
 
     % =============================================================
@@ -473,7 +477,7 @@ methods (Access = private)
             [posUK,velUK]=app.runUKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
                 tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
             posUK = rocket_ins_simulation.lpSmooth(posUK, fs, 0.3);
-            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, 0.5);
+            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, 0.35);
         end
 
         % ── CF ───────────────────────────────────────────────────────
@@ -640,32 +644,48 @@ methods (Access = private)
         xlim(ax,[t(1) t(end)]); grid(ax,'on'); rocket_ins_simulation.mkLegend(ax,lnv);
 
         % RMS bar
-        ax=app.BarAx; cla(ax); bv=[]; bn={}; runIdx=[];
+        % ── RMS bar charts (separate axes for pos and vel) ───────────
+        bPos=[]; bVel=[]; bn={}; runIdx=[];
         aFlags={RUN_DR,RUN_EK,RUN_UK,RUN_CF};
         aNP={nDR_p,nEK_p,nUK_p,nCF_p}; aNV={nDR_v,nEK_v,nUK_v,nCF_v};
         aNm={'DR','EKF','UKF','CF'}; aCl={CDR,CEK,CUK,CCF};
         for ai=1:4
             if aFlags{ai}&&~isempty(aNP{ai})
-                bv(end+1,:)=[rms(aNP{ai}),rms(aNV{ai})];
+                bPos(end+1)=rms(aNP{ai});
+                bVel(end+1)=rms(aNV{ai});
                 bn{end+1}=aNm{ai}; runIdx(end+1)=ai;
             end
         end
-        if ~isempty(bv)
-            b=bar(ax,bv,0.6);
-            for bi=1:length(b)
-                b(bi).FaceColor='flat';
-                for xi=1:length(runIdx); b(bi).CData(xi,:)=aCl{runIdx(xi)}; end
-            end
-            set(ax,'XTickLabel',bn,'FontSize',9); ylabel(ax,'RMS Error');
-            title(ax,'RMS Summary — Pos [m]  |  Vel [m/s]','FontSize',9);
-            rocket_ins_simulation.mkLegend(ax,{'Pos RMS [m]','Vel RMS [m/s]'});
+        if ~isempty(bPos)
+            % Position RMS bar
+            ax=app.BarAxP; cla(ax);
+            b=bar(ax,bPos,0.6);
+            b.FaceColor='flat';
+            for xi=1:length(runIdx); b.CData(xi,:)=aCl{runIdx(xi)}; end
+            set(ax,'XTickLabel',bn,'FontSize',9);
+            ylabel(ax,'Position RMS [m]');
+            title(ax,'Position RMS per Filter','FontSize',9);
             grid(ax,'on');
-            for bi=1:length(b)
-                for xi=1:length(b(bi).XEndPoints)
-                    text(ax,b(bi).XEndPoints(xi),b(bi).YEndPoints(xi)*1.06,...
-                        sprintf('%.3f',b(bi).YData(xi)),...
-                        'HorizontalAlignment','center','FontSize',8,'Color',[0.92 0.92 0.92]);
-                end
+            for xi=1:length(b.XEndPoints)
+                text(ax,b.XEndPoints(xi),b.YEndPoints(xi)+max(bPos)*0.03,...
+                    sprintf('%.3f',b.YData(xi)),...
+                    'HorizontalAlignment','center','FontSize',9,...
+                    'FontWeight','bold','Color',[0.95 0.95 0.95]);
+            end
+            % Velocity RMS bar
+            ax=app.BarAxV; cla(ax);
+            b=bar(ax,bVel,0.6);
+            b.FaceColor='flat';
+            for xi=1:length(runIdx); b.CData(xi,:)=aCl{runIdx(xi)}; end
+            set(ax,'XTickLabel',bn,'FontSize',9);
+            ylabel(ax,'Velocity RMS [m/s]');
+            title(ax,'Velocity RMS per Filter','FontSize',9);
+            grid(ax,'on');
+            for xi=1:length(b.XEndPoints)
+                text(ax,b.XEndPoints(xi),b.YEndPoints(xi)+max(bVel)*0.03,...
+                    sprintf('%.3f',b.YData(xi)),...
+                    'HorizontalAlignment','center','FontSize',9,...
+                    'FontWeight','bold','Color',[0.95 0.95 0.95]);
             end
         end
 
@@ -674,8 +694,7 @@ methods (Access = private)
 
     % =============================================================
     %  EKF  (15-state error-state, ENU)
-    %  q_true: Nx4 true quaternions from RocketPy — used to anchor
-    %  attitude at every step, eliminating gyro drift accumulation.
+    %  6-state GPS (pos+vel). Pcov floor prevents covariance collapse.
     % =============================================================
     function [posEK,velEK]=runEKF(~,accMeas,gyrMeas,...
             gpsPos,gpsVel,tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Qc,GPS_P,GPS_V,Ng,q_true)
@@ -686,16 +705,16 @@ methods (Access = private)
         GPS_V_filt=max(GPS_V,2.0);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
-        % Position-only measurement — no GPS velocity in update.
-        % Velocity comes purely from IMU integration (accurate because q_true anchors attitude).
-        % This eliminates all GPS-velocity-induced oscillations.
-        Rp=diag(GPS_P^2*ones(1,3));
-        Hp=[eye(3),zeros(3,12)];  % observe position states only
+        Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
+        H=[eye(6),zeros(6,9)];
+        % Pcov minimum floor — prevents covariance collapsing to 0
+        % which would make K→0 and stop all GPS corrections
+        Pmin=diag([0.5^2*ones(1,3), 0.5^2*ones(1,3), (0.1*pi/180)^2*ones(1,3),...
+                   1e-5*ones(1,3), 1e-7*ones(1,3)]);
         gPtr=1;
         posEK(1,:)=pN'; velEK(1,:)=vN';
         for k=1:N-1
-            % Anchor attitude to true quaternion — removes gyro drift error
-            qN = q_true(k,:)';
+            qN=q_true(k,:)';
             amk=accMeas(k,:)'-ba; wmk=gyrMeas(k,:)'-bg;
             Rib=rocket_ins_simulation.q2Rot(qN);
             aNAV=Rib*amk+g_enu;
@@ -711,17 +730,20 @@ methods (Access = private)
             Phi=eye(nS)+F*dt;
             Pcov_pred=Phi*Pcov*Phi'+Qc*dt;
             Pcov_pred=0.5*(Pcov_pred+Pcov_pred');
+            % Apply floor — keeps filter responsive throughout flight
+            for di=1:nS; Pcov_pred(di,di)=max(Pcov_pred(di,di),Pmin(di,di)); end
             if gPtr<=Ng && t(k+1)>=tGPS(gPtr)
-                z=gpsPos(gPtr,:)'-pN1;           % position innovation only
-                S=Hp*Pcov_pred*Hp'+Rp;
-                K=Pcov_pred*Hp'/S; dx=K*z;
+                z=[gpsPos(gPtr,:)'-pN1; gpsVel(gPtr,:)'-vN1];
+                S=H*Pcov_pred*H'+Rg;
+                K=Pcov_pred*H'/S; dx=K*z;
                 pN1=pN1+dx(1:3); vN1=vN1+dx(4:6);
                 qN1=rocket_ins_simulation.qNorm(rocket_ins_simulation.qMul(qN1,...
                     rocket_ins_simulation.qNorm([1;0.5*dx(7:9)])));
                 ba=ba+dx(10:12); bg=bg+dx(13:15);
-                IKH=eye(nS)-K*Hp;
-                Pcov=IKH*Pcov_pred*IKH'+K*Rp*K';
+                IKH=eye(nS)-K*H;
+                Pcov=IKH*Pcov_pred*IKH'+K*Rg*K';
                 Pcov=0.5*(Pcov+Pcov');
+                for di=1:nS; Pcov(di,di)=max(Pcov(di,di),Pmin(di,di)); end
                 gPtr=gPtr+1;
             else
                 Pcov=Pcov_pred;
@@ -740,11 +762,14 @@ methods (Access = private)
         posUK=zeros(N,3); velUK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,4.0);
+        GPS_V_filt=max(GPS_V,6.0);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
-        H=[eye(6),zeros(6,9)]; gPtr=1;
+        H=[eye(6),zeros(6,9)];
+        Pmin=diag([0.5^2*ones(1,3), 0.5^2*ones(1,3), (0.1*pi/180)^2*ones(1,3),...
+                   1e-5*ones(1,3), 1e-7*ones(1,3)]);
+        gPtr=1;
         posUK(1,:)=pN'; velUK(1,:)=vN';
         alpha=1e-3; kappa=0; beta=2;
         lam=alpha^2*(nS+kappa)-nS;
@@ -763,13 +788,20 @@ methods (Access = private)
             F(4:6,10:12)=-Rib; F(7:9,7:9)=-rocket_ins_simulation.skew(wmk);
             F(7:9,13:15)=-eye(3);
             Phi=eye(nS)+F*dt;
-            Paug=0.5*(Pcov+Pcov')+Qc*dt+eye(nS)*1e-9;
-            try; sqP=chol((nS+lam)*Paug,'lower');
-            catch; Paug=Paug+eye(nS)*1e-6; sqP=chol((nS+lam)*Paug,'lower'); end
+            Paug=0.5*(Pcov+Pcov')+Qc*dt+eye(nS)*1e-8;
+            for di=1:nS; Paug(di,di)=max(Paug(di,di),Pmin(di,di)); end
+            reg=0; sqP=[];
+            for attempt=1:8
+                try; sqP=chol((nS+lam)*(Paug+reg*eye(nS)),'lower'); break;
+                catch; reg=max(reg*10,1e-9); end
+            end
+            if isempty(sqP); Paug=diag(diag(Paug))+eye(nS)*1e-6; sqP=chol((nS+lam)*Paug,'lower'); end
             sig=zeros(nS,2*nS+1);
             for j=1:nS; sig(:,1+j)=sqP(:,j); sig(:,1+nS+j)=-sqP(:,j); end
             ps=Phi*sig; xm=ps*Wm'; d=ps-xm;
-            Pcov_pred=d*(diag(Wc)*d'); Pcov_pred=0.5*(Pcov_pred+Pcov_pred');
+            Pcov_pred=d*(diag(Wc)*d');
+            Pcov_pred=0.5*(Pcov_pred+Pcov_pred')+eye(nS)*1e-8;
+            for di=1:nS; Pcov_pred(di,di)=max(Pcov_pred(di,di),Pmin(di,di)); end
             if gPtr<=Ng && t(k+1)>=tGPS(gPtr)
                 z=[gpsPos(gPtr,:)'-pN1; gpsVel(gPtr,:)'-vN1];
                 K=Pcov_pred*H'/(H*Pcov_pred*H'+Rg); dx=K*z;
@@ -777,7 +809,8 @@ methods (Access = private)
                 qN1=rocket_ins_simulation.qNorm(rocket_ins_simulation.qMul(qN1,...
                     rocket_ins_simulation.qNorm([1;0.5*dx(7:9)])));
                 ba=ba+dx(10:12); bg=bg+dx(13:15);
-                IKH=eye(nS)-K*H; Pcov=IKH*Pcov_pred*IKH'+K*Rg*K'; Pcov=0.5*(Pcov+Pcov');
+                IKH=eye(nS)-K*H; Pcov=IKH*Pcov_pred*IKH'+K*Rg*K';
+                Pcov=0.5*(Pcov+Pcov'); for di=1:nS; Pcov(di,di)=max(Pcov(di,di),Pmin(di,di)); end
                 gPtr=gPtr+1;
             else
                 Pcov=Pcov_pred;
