@@ -759,15 +759,16 @@ methods (Access = private)
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
         GPS_V_filt=max(GPS_V,8.0);
+        GPS_P_filt=GPS_P*2.0;  % inflate position noise to reduce correction magnitude
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
-        Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
+        Rg=diag([GPS_P_filt^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
         H=[eye(6),zeros(6,9)];
         Pmin=diag([0.1^2*ones(1,3), 1e-6*ones(1,3), 1e-8*ones(1,3),...
                    1e-7*ones(1,3), 1e-9*ones(1,3)]);
         gPtr=1;
         posUK(1,:)=pN'; velUK(1,:)=vN';
-        alpha=1e-3; kappa=0; beta=2;
+        alpha=0.1; kappa=0; beta=2;  % larger alpha keeps sigma points closer together
         lam=alpha^2*(nS+kappa)-nS;
         Wm=[lam/(nS+lam),repmat(1/(2*(nS+lam)),1,2*nS)];
         Wc=Wm; Wc(1)=Wc(1)+(1-alpha^2+beta);
