@@ -178,7 +178,7 @@ methods (Access = private)
 
         % GPS
         rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
-        rocket_ins_simulation.mkSecLabel(fg,r,'🛰  GPS  (10 Hz)',FH,BP); r=r+1;
+        rocket_ins_simulation.mkSecLabel(fg,r,'🛰  GPS  (5 Hz)',FH,BP); r=r+1;
         rocket_ins_simulation.mkLabel(fg,r,1,'Pos noise σ [m]:',FT,BP);
         app.GpsPosField=rocket_ins_simulation.mkNumField(fg,r,2,1.5,BC); r=r+1;
         rocket_ins_simulation.mkLabel(fg,r,1,'Vel noise σ [m/s]:',FT,BP);
@@ -414,7 +414,7 @@ methods (Access = private)
         end
 
         % ── GPS ──────────────────────────────────────────────────────
-        gpsSkip=max(1,round(0.1/dt));  % 10 Hz GPS
+        gpsSkip=max(1,round(0.2/dt));  % 5 Hz GPS
         gpsIdx=1:gpsSkip:N; tGPS=t(gpsIdx); Ng=length(gpsIdx);
         gpsPos=[px(gpsIdx),py(gpsIdx),pz(gpsIdx)]+GPS_P*randn(Ng,3);
         gpsVel=[vx(gpsIdx),vy(gpsIdx),vz(gpsIdx)]+GPS_V*randn(Ng,3);
@@ -545,7 +545,7 @@ methods (Access = private)
             plot(ax,tGPS,gpsPos(:,i),'.','Color',[0.5 0.5 0.5],'MarkerSize',6);
             plot(ax,tGPS,gpsPosSmooth(:,i),'.','Color',CGP,'MarkerSize',8);
             hold(ax,'off'); ylabel(ax,plbl{i},'FontSize',8);
-            if i==1; title(ax,'GPS vs True Position — ENU (10 Hz, smoothed)','FontSize',9); end
+            if i==1; title(ax,'GPS vs True Position — ENU (5 Hz, smoothed)','FontSize',9); end
             if i==3; xlabel(ax,'Time [s]'); end
             xlim(ax,[t(1) t(end)]); grid(ax,'on');
             rocket_ins_simulation.mkLegend(ax,{'True','GPS raw','GPS smoothed'});
