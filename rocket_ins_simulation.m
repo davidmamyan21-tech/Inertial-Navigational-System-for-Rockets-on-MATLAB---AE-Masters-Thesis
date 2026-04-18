@@ -51,6 +51,24 @@ properties (Access = private)
     FiltQbaField    matlab.ui.control.NumericEditField   % Q acc bias
     FiltQbgField    matlab.ui.control.NumericEditField   % Q gyr bias
 
+    % EKF advanced
+    EkfVelFloorField  matlab.ui.control.NumericEditField
+    EkfLpPosField     matlab.ui.control.NumericEditField
+    EkfLpVelField     matlab.ui.control.NumericEditField
+
+    % UKF advanced
+    UkfVelFloorField  matlab.ui.control.NumericEditField
+    UkfPosInflField   matlab.ui.control.NumericEditField
+    UkfAlphaField     matlab.ui.control.NumericEditField
+    UkfLpPosField     matlab.ui.control.NumericEditField
+    UkfLpVelField     matlab.ui.control.NumericEditField
+
+    % CF advanced
+    CfKpField         matlab.ui.control.NumericEditField
+    CfKvField         matlab.ui.control.NumericEditField
+    CfLpPosField      matlab.ui.control.NumericEditField
+    CfLpVelField      matlab.ui.control.NumericEditField
+
     ChkDR   matlab.ui.control.CheckBox
     ChkEKF  matlab.ui.control.CheckBox
     ChkUKF  matlab.ui.control.CheckBox
@@ -135,14 +153,32 @@ methods (Access = private)
         % 24  : ChkUKF
         % 25  : ChkCF
         % 26  : SEP
-        % 27  : RUN button
-        % 28..31 : status
-        % Total: 31
+        % 27  : EKF Advanced header
+        % 28  : EKF vel floor
+        % 29  : EKF LP pos
+        % 30  : EKF LP vel
+        % 31  : SEP
+        % 32  : UKF Advanced header
+        % 33  : UKF vel floor
+        % 34  : UKF pos infl
+        % 35  : UKF alpha
+        % 36  : UKF LP pos
+        % 37  : UKF LP vel
+        % 38  : SEP
+        % 39  : CF Advanced header
+        % 40  : CF kp
+        % 41  : CF kv
+        % 42  : CF LP pos
+        % 43  : CF LP vel
+        % 44  : SEP
+        % 45  : RUN button
+        % 46..49 : status
+        % Total: 49
 
-        NR=31; sepR=[4,8,12,20,26];
+        NR=49; sepR=[4,8,12,20,26,31,38,44];
         rowH=repmat({26},1,NR);
         for s=sepR; rowH{s}=10; end
-        rowH{7}=50; rowH{14}=36; rowH{27}=42;
+        rowH{7}=50; rowH{14}=36; rowH{27}=22; rowH{32}=22; rowH{39}=22; rowH{45}=42;
 
         fg=uigridlayout(sp,[NR 2]);
         fg.RowHeight=rowH; fg.ColumnWidth={'1.3x','1x'};
@@ -178,7 +214,7 @@ methods (Access = private)
 
         % GPS
         rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
-        rocket_ins_simulation.mkSecLabel(fg,r,'🛰  GPS  (5 Hz)',FH,BP); r=r+1;
+        rocket_ins_simulation.mkSecLabel(fg,r,'🛰  GPS  (1 Hz)',FH,BP); r=r+1;
         rocket_ins_simulation.mkLabel(fg,r,1,'Pos noise σ [m]:',FT,BP);
         app.GpsPosField=rocket_ins_simulation.mkNumField(fg,r,2,1.5,BC); r=r+1;
         rocket_ins_simulation.mkLabel(fg,r,1,'Vel noise σ [m/s]:',FT,BP);
@@ -222,6 +258,45 @@ methods (Access = private)
         app.ChkCF.Layout.Row=r; app.ChkCF.Layout.Column=[1 2]; r=r+1;
 
         % Run
+        rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
+
+        % EKF Advanced
+        rocket_ins_simulation.mkSecLabel(fg,r,'🔵  EKF Advanced Tuning',FH,BP); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'Vel floor [m/s]:',FT,BP);
+        app.EkfVelFloorField=rocket_ins_simulation.mkNumField(fg,r,2,5.0,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP pos cutoff [Hz]:',FT,BP);
+        app.EkfLpPosField=rocket_ins_simulation.mkNumField(fg,r,2,0.3,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP vel cutoff [Hz]:',FT,BP);
+        app.EkfLpVelField=rocket_ins_simulation.mkNumField(fg,r,2,0.5,BC); r=r+1;
+
+        rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
+
+        % UKF Advanced
+        rocket_ins_simulation.mkSecLabel(fg,r,'🟣  UKF Advanced Tuning',FH,BP); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'Vel floor [m/s]:',FT,BP);
+        app.UkfVelFloorField=rocket_ins_simulation.mkNumField(fg,r,2,8.0,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'Pos noise inflate ×:',FT,BP);
+        app.UkfPosInflField=rocket_ins_simulation.mkNumField(fg,r,2,2.0,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'Alpha (σ spread):',FT,BP);
+        app.UkfAlphaField=rocket_ins_simulation.mkNumField(fg,r,2,0.1,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP pos cutoff [Hz]:',FT,BP);
+        app.UkfLpPosField=rocket_ins_simulation.mkNumField(fg,r,2,0.3,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP vel cutoff [Hz]:',FT,BP);
+        app.UkfLpVelField=rocket_ins_simulation.mkNumField(fg,r,2,0.3,BC); r=r+1;
+
+        rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
+
+        % CF Advanced
+        rocket_ins_simulation.mkSecLabel(fg,r,'🟢  CF Advanced Tuning',FH,BP); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'kp (pos gain):',FT,BP);
+        app.CfKpField=rocket_ins_simulation.mkNumField(fg,r,2,0.7,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'kv (vel gain):',FT,BP);
+        app.CfKvField=rocket_ins_simulation.mkNumField(fg,r,2,0.1,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP pos cutoff [Hz]:',FT,BP);
+        app.CfLpPosField=rocket_ins_simulation.mkNumField(fg,r,2,0.4,BC); r=r+1;
+        rocket_ins_simulation.mkLabel(fg,r,1,'LP vel cutoff [Hz]:',FT,BP);
+        app.CfLpVelField=rocket_ins_simulation.mkNumField(fg,r,2,0.5,BC); r=r+1;
+
         rocket_ins_simulation.mkSep(fg,r,BP); r=r+1;
         app.RunBtn=uibutton(fg,'Text','▶  RUN SIMULATION',...
             'FontSize',12,'FontWeight','bold',...
@@ -414,7 +489,7 @@ methods (Access = private)
         end
 
         % ── GPS ──────────────────────────────────────────────────────
-        gpsSkip=max(1,round(0.2/dt));  % 5 Hz GPS
+        gpsSkip=max(1,round(1/dt));  % 1 Hz GPS
         gpsIdx=1:gpsSkip:N; tGPS=t(gpsIdx); Ng=length(gpsIdx);
         gpsPos=[px(gpsIdx),py(gpsIdx),pz(gpsIdx)]+GPS_P*randn(Ng,3);
         gpsVel=[vx(gpsIdx),vy(gpsIdx),vz(gpsIdx)]+GPS_V*randn(Ng,3);
@@ -464,26 +539,37 @@ methods (Access = private)
         posEK=[]; velEK=[];
         if RUN_EK
             app.setStatus('⏳  EKF running...',[1 0.8 0.2]);
+            ekfVelFloor = app.EkfVelFloorField.Value;
             [posEK,velEK]=app.runEKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
-                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
+                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true,ekfVelFloor);
+            posEK = rocket_ins_simulation.lpSmooth(posEK, fs, app.EkfLpPosField.Value);
+            velEK = rocket_ins_simulation.lpSmooth(velEK, fs, app.EkfLpVelField.Value);
         end
 
         % ── UKF ──────────────────────────────────────────────────────
         posUK=[]; velUK=[];
         if RUN_UK
             app.setStatus('⏳  UKF running...',[1 0.8 0.2]);
+            ukfVelFloor = app.UkfVelFloorField.Value;
+            ukfPosInfl  = app.UkfPosInflField.Value;
+            ukfAlpha    = app.UkfAlphaField.Value;
             [posUK,velUK]=app.runUKF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
-                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true);
+                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Qc,GPS_P,GPS_V,Ng,q_true,...
+                ukfVelFloor,ukfPosInfl,ukfAlpha);
+            posUK = rocket_ins_simulation.lpSmooth(posUK, fs, app.UkfLpPosField.Value);
+            velUK = rocket_ins_simulation.lpSmooth(velUK, fs, app.UkfLpVelField.Value);
         end
 
         % ── CF ───────────────────────────────────────────────────────
         posCF=[]; velCF=[];
         if RUN_CF
             app.setStatus('⏳  CF running...',[1 0.8 0.2]);
+            cfKp = app.CfKpField.Value;
+            cfKv = app.CfKvField.Value;
             [posCF,velCF]=app.runCF(accMeas,gyrMeas,gpsPosSmooth,gpsVelSmooth,...
-                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Ng,q_true);
-            posCF = rocket_ins_simulation.lpSmooth(posCF, fs, 0.3);
-            velCF = rocket_ins_simulation.lpSmooth(velCF, fs, 0.5);
+                tGPS,t,dt,px,py,pz,vx,vy,vz,q0_init,g_enu,Ng,q_true,cfKp,cfKv);
+            posCF = rocket_ins_simulation.lpSmooth(posCF, fs, app.CfLpPosField.Value);
+            velCF = rocket_ins_simulation.lpSmooth(velCF, fs, app.CfLpVelField.Value);
         end
 
         % ── Errors ───────────────────────────────────────────────────
@@ -545,7 +631,7 @@ methods (Access = private)
             plot(ax,tGPS,gpsPos(:,i),'.','Color',[0.5 0.5 0.5],'MarkerSize',6);
             plot(ax,tGPS,gpsPosSmooth(:,i),'.','Color',CGP,'MarkerSize',8);
             hold(ax,'off'); ylabel(ax,plbl{i},'FontSize',8);
-            if i==1; title(ax,'GPS vs True Position — ENU (5 Hz, smoothed)','FontSize',9); end
+            if i==1; title(ax,'GPS vs True Position — ENU (1 Hz, smoothed)','FontSize',9); end
             if i==3; xlabel(ax,'Time [s]'); end
             xlim(ax,[t(1) t(end)]); grid(ax,'on');
             rocket_ins_simulation.mkLegend(ax,{'True','GPS raw','GPS smoothed'});
@@ -693,12 +779,13 @@ methods (Access = private)
     %  6-state GPS (pos+vel). Pcov floor prevents covariance collapse.
     % =============================================================
     function [posEK,velEK]=runEKF(~,accMeas,gyrMeas,...
-            gpsPos,gpsVel,tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Qc,GPS_P,GPS_V,Ng,q_true)
+            gpsPos,gpsVel,tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Qc,GPS_P,GPS_V,Ng,q_true,velFloor)
         N=length(t); nS=15;
         posEK=zeros(N,3); velEK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,5.0);
+        if nargin<23; velFloor=5.0; end
+        GPS_V_filt=max(GPS_V,velFloor);
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
@@ -753,13 +840,17 @@ methods (Access = private)
     %  GPS measurement: position + velocity (6-state), stable.
     % =============================================================
     function [posUK,velUK]=runUKF(~,accMeas,gyrMeas,gpsPos,gpsVel,...
-            tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Qc,GPS_P,GPS_V,Ng,q_true)
+            tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Qc,GPS_P,GPS_V,Ng,q_true,...
+            velFloor,posInfl,alphaIn)
         N=length(t); nS=15;
         posUK=zeros(N,3); velUK=zeros(N,3);
         pN=[px(1);py(1);pz(1)]; vN=[vx(1);vy(1);vz(1)];
         qN=q0; ba=zeros(3,1); bg=zeros(3,1);
-        GPS_V_filt=max(GPS_V,8.0);
-        GPS_P_filt=GPS_P*2.0;  % inflate position noise to reduce correction magnitude
+        if nargin<23; velFloor=8.0; end
+        if nargin<24; posInfl=2.0;  end
+        if nargin<25; alphaIn=0.1;  end
+        GPS_V_filt=max(GPS_V,velFloor);
+        GPS_P_filt=GPS_P*posInfl;
         Pcov=diag([GPS_P^2*ones(1,3), 100^2*ones(1,3), (2*pi/180)^2*ones(1,3),...
                    1e-3*ones(1,3), 1e-5*ones(1,3)]);
         Rg=diag([GPS_P_filt^2*ones(1,3), GPS_V_filt^2*ones(1,3)]);
@@ -768,7 +859,7 @@ methods (Access = private)
                    1e-7*ones(1,3), 1e-9*ones(1,3)]);
         gPtr=1;
         posUK(1,:)=pN'; velUK(1,:)=vN';
-        alpha=0.1; kappa=0; beta=2;  % larger alpha keeps sigma points closer together
+        alpha=alphaIn; kappa=0; beta=2;  % sigma point spread — from UI
         lam=alpha^2*(nS+kappa)-nS;
         Wm=[lam/(nS+lam),repmat(1/(2*(nS+lam)),1,2*nS)];
         Wc=Wm; Wc(1)=Wc(1)+(1-alpha^2+beta);
@@ -821,11 +912,13 @@ methods (Access = private)
     %  COMPLEMENTARY FILTER  (ENU)
     % =============================================================
     function [posCF,velCF]=runCF(~,accMeas,gyrMeas,gpsPos,gpsVel,...
-            tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Ng,q_true)
+            tGPS,t,dt,px,py,pz,vx,vy,vz,q0,g_enu,Ng,q_true,kpIn,kvIn)
         N=length(t);
         posCF=zeros(N,3); velCF=zeros(N,3);
         posCF(1,:)=[px(1),py(1),pz(1)]; velCF(1,:)=[vx(1),vy(1),vz(1)];
-        qCF=q0; kp=0.3; gPtr=1;  % kv removed — CF velocity comes purely from IMU
+        if nargin<21; kpIn=0.7; end
+        if nargin<22; kvIn=0.1; end
+        qCF=q0; kp=kpIn; kv=kvIn; gPtr=1;
         for k=1:N-1
             qCF=q_true(k,:)';   % anchor attitude to truth
             Rib=rocket_ins_simulation.q2Rot(qCF);
@@ -835,8 +928,11 @@ methods (Access = private)
             dq=rocket_ins_simulation.w2dq(gyrMeas(k,:)',dt);
             qCF=rocket_ins_simulation.qNorm(rocket_ins_simulation.qMul(qCF,dq));
             if gPtr<=Ng && t(k+1)>=tGPS(gPtr)
-                % Position-only correction — no GPS velocity used in CF
+                % Position + gentle velocity correction
+                % kv=0.08 is small enough to avoid burnout spike,
+                % large enough to prevent terminal descent drift
                 pPred=pPred+kp*(gpsPos(gPtr,:)'-pPred);
+                vPred=vPred+kv*(gpsVel(gPtr,:)'-vPred);
                 gPtr=gPtr+1;
             end
             velCF(k+1,:)=vPred'; posCF(k+1,:)=pPred';
